@@ -190,6 +190,29 @@ public class Integrity : NetworkBehaviour, IHealth, IFireExposable, IRightClicka
 		}
 	}
 
+
+	/// <summary>
+	///  Restore damage dealt to this object.
+	/// </summary>
+	/// <param name="restore"></param>
+	[Server]
+	public void RestoreDamage(float restore)
+	{
+		//already destroyed, don't restore
+		if (destroyed || Resistances.Indestructable) return;
+
+		if ((integrity + restore) > initialIntegrity)
+		{
+			integrity = initialIntegrity;
+		}
+		else
+		{
+			integrity += restore;
+		}
+
+		Logger.LogTraceFormat("{0} restored {1} integrity", Category.Health, name, restore);
+	}
+
 	private void UpdateMe()
 	{
 		if (onFire && isServer)

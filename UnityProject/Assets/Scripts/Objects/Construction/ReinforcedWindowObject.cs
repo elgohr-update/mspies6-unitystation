@@ -37,6 +37,9 @@ public class ReinforcedWindowObject : NetworkBehaviour, ICheckedInteractable<Han
 	[Tooltip("Sound when destroyed.")]
 	public string soundOnDestroy;
 
+	[Header("Repair variables")]
+	[Tooltip("How much integrity is restored from welding")]
+	public int integrityRestore;
 	
 
 	private void Start()
@@ -64,7 +67,8 @@ public class ReinforcedWindowObject : NetworkBehaviour, ICheckedInteractable<Han
 		if (interaction.TargetObject != gameObject) return false;
 
 		if (!Validations.HasItemTrait(interaction.HandObject, CommonTraits.Instance.Wrench) &&
-			!Validations.HasItemTrait(interaction.HandObject, CommonTraits.Instance.Screwdriver))  return false; 
+			!Validations.HasItemTrait(interaction.HandObject, CommonTraits.Instance.Screwdriver) &&
+			!Validations.HasItemTrait(interaction.HandObject, CommonTraits.Instance.Welder))  return false; 
 
 		return true;
 	}
@@ -126,7 +130,22 @@ public class ReinforcedWindowObject : NetworkBehaviour, ICheckedInteractable<Han
 				Chat.AddExamineMsg(interaction.Performer, "You must unsecure it first.");
 			}
 		}
-		
+		else if (Validations.HasItemTrait(interaction.HandObject, CommonTraits.Instance.Welder))
+		{
+			var welder = interaction.HandObject.GetComponent<Welder>();
+			if (welder.IsOn && interaction.Intent == Intent.Help)
+			{
+				ToolUtils.ServerUseToolWithActionMessages(interaction, 4f,
+					"You start to repair the window...",
+					$"{interaction.Performer.ExpensiveName()} starts repairing the window...",
+					"You repaired the window.",
+					$"{interaction.Performer.ExpensiveName()} has repaired the window.",
+					() => Repair(interaction));
+				return;
+			}
+		}
+
+
 	}
 
 	[Server]
@@ -144,6 +163,12 @@ public class ReinforcedWindowObject : NetworkBehaviour, ICheckedInteractable<Han
 		Spawn.ServerPrefab(matsOnDeconstruct, registerObject.WorldPositionServer, count: countOfMatsOnDissasemle);
 		SoundManager.PlayNetworkedAtPos(soundOnDeconstruct, gameObject.TileWorldPosition().To3Int(), 1f);
 		Despawn.ServerSingle(gameObject);
+	}
+
+	[Server]
+	private void Repair(HandApply interaction)
+	{
+		GetComponent<Integrity>().RestoreDamage(integrityRestore);
 	}
 
 }
